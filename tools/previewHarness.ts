@@ -1,6 +1,6 @@
 // Renders the statistics panel to a standalone HTML file so the layout can be
 // checked in a browser without launching Joplin. Test-only.
-import joplinStub, { store } from './apiStub';
+import { store } from './apiStub';  // the stub is wired in via the api shim; we only need the store
 import { computeStats } from '../src/stats';
 import { render } from '../src/statsView';
 import * as fs from 'fs';

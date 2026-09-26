@@ -1,6 +1,6 @@
 {
   "name": "joplin-plugin-recall",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Rediscover your notes: random review, on this day, and whole-library writing statistics that count CJK correctly.",
   "scripts": {
     "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",

@@ -1,14 +1,13 @@
 import joplin from 'api';
 import { ToastType } from 'api/types';
 import { Stats, computeStats, clearCache } from './stats';
-import { upsertStatsNote } from './statsNote';
 
 // The statistics are shown in a modal dialog rather than a panel: this is a
 // look-at-it-occasionally feature, and a panel would hold a column of the
 // layout open permanently for it. The trade-off is that Joplin dialogs have no
 // message channel back to the plugin, so everything interactive is a dialog
-// button, and note links live in the "as a note" output where markdown links
-// work natively.
+// button and note titles are plain text; "Copy as Markdown" is the way figures
+// leave the dialog.
 
 let handle: string | null = null;
 let busy = false;
@@ -195,7 +194,6 @@ export function toMarkdown(s: Stats): string {
 // deliberate, since the remaining actions all have side effects.
 const BUTTONS = [
 	{ id: 'copy', title: 'Copy as Markdown' },
-	{ id: 'note', title: 'Save as note' },
 	{ id: 'rebuild', title: 'Rebuild cache' },
 	{ id: 'cancel', title: 'Close' },
 ];
@@ -227,9 +225,6 @@ export async function showStats(rebuild = false): Promise<void> {
 		if (result.id === 'copy') {
 			await joplin.clipboard.writeText(toMarkdown(stats));
 			await joplin.views.dialogs.showToast({ message: 'Recall: statistics copied.', type: ToastType.Success });
-		} else if (result.id === 'note') {
-			const id = await upsertStatsNote(toMarkdown(stats));
-			await joplin.commands.execute('openNote', id);
 		} else if (result.id === 'rebuild') {
 			busy = false;
 			return showStats(true);

@@ -3,4 +3,3 @@
 // otherwise the digest notes would be counted as writing.
 export const ON_THIS_DAY_PREFIX = '📅 On This Day';
 export const DIGEST_PREFIX = '🗓 Daily Recall';
-export const STATS_PREFIX = '📊 Writing Stats';

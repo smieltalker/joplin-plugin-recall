@@ -1,6 +1,6 @@
 import joplin from 'api';
 import { Counts, countBody, emptyCounts, addCounts } from './wordcount';
-import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX, STATS_PREFIX } from './constants';
+import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX } from './constants';
 
 // -------------------------------------------------------------------------
 // Whole-library statistics.
@@ -134,7 +134,7 @@ export async function computeStats(onProgress: Progress = () => {}): Promise<Sta
 	// Recall's own generated notes are not writing.
 	const subjects = notes.filter((n) => {
 		const t = n.title || '';
-		return !t.startsWith(ON_THIS_DAY_PREFIX) && !t.startsWith(DIGEST_PREFIX) && !t.startsWith(STATS_PREFIX);
+		return !t.startsWith(ON_THIS_DAY_PREFIX) && !t.startsWith(DIGEST_PREFIX);
 	});
 
 	const cache = await loadCache();

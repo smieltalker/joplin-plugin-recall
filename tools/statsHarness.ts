@@ -1,6 +1,6 @@
 // Runs computeStats() over a real library piped in as NDJSON, to check the
 // aggregation end to end. Usage: <dump> | node statsHarness.js
-import joplinStub, { store } from './apiStub';
+import { store } from './apiStub';  // the stub is wired in via the api shim; we only need the store
 import { computeStats } from '../src/stats';
 
 const read = (): Promise<void> => new Promise((resolve) => {

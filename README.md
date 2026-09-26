@@ -48,9 +48,7 @@ rebuilt from the panel.
 **Where it lives.** Open it from **Tools → Recall → Writing statistics**. It is
 a dialog, not a panel, because this is a look-at-it-occasionally feature and a
 panel would hold a column of the layout open for it permanently. From the
-dialog you can copy the figures as Markdown, rebuild the cache, or save them to
-a note — *Writing statistics as a note* writes the same figures into a real
-note, so they sync, stay searchable, and their links are clickable.
+dialog you can copy the figures as Markdown or rebuild the cache.
 
 ## Usage
 
@@ -70,7 +68,7 @@ Settings → Recall:
 | Target notebook ID | _(empty)_ | Where generated notes are stored; empty = default |
 | Generate Daily Recall on startup | off | Auto-build the digest when Joplin starts |
 
-The "On This Day", "Daily Recall" and "Writing Stats" notes are **upserted** —
+The "On This Day" and "Daily Recall" notes are **upserted per day** —
 re-running updates the same note instead of creating duplicates.
 
 ## Building from source
