@@ -1,0 +1,83 @@
+/* Styling leans on Joplin's own theme variables so the dialog follows whatever
+   light/dark theme the user has picked, rather than hard-coding colours. */
+
+.wrap {
+	font-family: var(--joplin-font-family, sans-serif);
+	font-size: var(--joplin-font-size, 13px);
+	color: var(--joplin-color, #222);
+	padding: 4px 2px 8px;
+	box-sizing: border-box;
+}
+
+.wrap h2 { font-size: 1.3em; margin: 0 0 12px; }
+.wrap h3 {
+	font-size: 0.85em; text-transform: uppercase; letter-spacing: .06em;
+	opacity: .6; margin: 20px 0 8px; font-weight: 600;
+}
+.wrap p.note { opacity: .65; margin: 8px 0 0; line-height: 1.5; }
+.wrap p.empty { opacity: .6; padding: 18px 0; }
+
+/* --- summary tiles --- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.tile {
+	border: 1px solid var(--joplin-divider-color, rgba(127, 127, 127, .3));
+	border-radius: 6px; padding: 8px 12px;
+}
+.tile-v { font-size: 1.45em; font-weight: 650; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tile-l { font-size: .82em; opacity: .62; margin-top: 2px; }
+
+/* --- the three breakdowns sit side by side when the dialog is wide --- */
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
+.cols section { min-width: 0; }
+
+/* --- bar rows --- */
+table.bars { width: 100%; border-collapse: collapse; }
+table.bars td { padding: 2px 0; vertical-align: middle; line-height: 1.5; }
+.b-k {
+	max-width: 0; width: 42%; white-space: nowrap; overflow: hidden;
+	text-overflow: ellipsis; padding-right: 8px !important;
+}
+.b-b { width: 30%; }
+.b-b span {
+	display: block; height: 7px; border-radius: 3px; min-width: 2px;
+	background: var(--joplin-url-color, #2e7fd4); opacity: .55;
+}
+.b-w { text-align: right; font-variant-numeric: tabular-nums; padding-left: 8px !important; white-space: nowrap; }
+.b-n {
+	text-align: right; opacity: .45; width: 3.4em; padding-left: 10px !important;
+	font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* No bar column here, so the title takes the remaining width. max-width:0 has
+   to stay for text-overflow to work inside a table cell. */
+.longest .b-k { width: 100%; }
+
+/* --- heatmap --- */
+/* .heat scrolls; the legend lives in .heatwrap outside it, otherwise scrolling
+   to today pushes the legend out of the visible area. */
+.heatwrap { position: relative; }
+.heat { position: relative; overflow-x: auto; padding-bottom: 2px; }
+.hmonths { position: relative; height: 13px; font-size: .72em; opacity: .55; }
+.hmonths span { position: absolute; white-space: nowrap; }
+.hgrid { display: flex; gap: 2px; }
+.hcol { display: flex; flex-direction: column; gap: 2px; }
+i.c { display: block; width: 9px; height: 9px; border-radius: 2px; background: currentColor; opacity: .08; }
+i.c.pad { opacity: 0; }
+i.c.l0 { opacity: .08; }
+i.c.l1 { background: #2f9e62; opacity: .35; }
+i.c.l2 { background: #2f9e62; opacity: .55; }
+i.c.l3 { background: #2f9e62; opacity: .72; }
+i.c.l4 { background: #2f9e62; opacity: .87; }
+i.c.l5 { background: #2f9e62; opacity: 1; }
+.hlegend { display: flex; align-items: center; gap: 3px; margin-top: 8px; font-size: .72em; opacity: .55; }
+.hlegend span { margin: 0 4px; }
+
+/* --- footer --- */
+.method { margin-top: 18px; font-size: .9em; }
+.method summary { cursor: pointer; opacity: .6; }
+.method ul { margin: 8px 0 0; padding-left: 18px; opacity: .7; line-height: 1.65; }
+.foot {
+	display: flex; margin-top: 14px; padding-top: 12px;
+	border-top: 1px solid var(--joplin-divider-color, rgba(127, 127, 127, .25));
+	font-size: .82em;
+}
+.foot span { opacity: .45; }

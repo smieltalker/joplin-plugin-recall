@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "outDir": "../.harness-build",
+    "module": "commonjs",
+    "target": "es2018",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "baseUrl": "..",
+    "paths": {
+      "api": [
+        "tools/apiStub.ts"
+      ],
+      "api/types": [
+        "api/types.ts"
+      ]
+    }
+  },
+  "files": [
+    "statsHarness.ts",
+    "previewHarness.ts"
+  ]
+}
