@@ -36,6 +36,9 @@ const THEMES: Record<string, string> = {
 	const css = fs.readFileSync(process.argv[3], 'utf8'); // path passed in; __dirname points at the build output
 	const js = fs.readFileSync(process.argv[4], 'utf8');
 	const body = render(stats);
+	// 5th arg picks a single theme; omit it for both, stacked.
+	const only = process.argv[5];
+	const themes = only ? { [only]: THEMES[only] } : THEMES;
 	const out = `<!doctype html><meta charset="utf-8"><title>Recall panel preview</title>
 <style>
 /* Stacked full-width, because the real thing is a 90vw x 80vh dialog. */
@@ -45,7 +48,7 @@ body{margin:0;font-family:sans-serif}
 .pane.dark{background:#1d2024}
 ${css}
 </style>
-${Object.keys(THEMES).map((k) => `<div class="pane ${k}" style="${THEMES[k]}">${body}</div>`).join('')}
+${Object.keys(themes).map((k) => `<div class="pane ${k}" style="${themes[k]}">${body}</div>`).join('')}
 <script>window.webviewApi={postMessage:(m)=>console.log('postMessage',m)};</script>
 <script>${js}</script>`;
 	const dest = process.argv[2];

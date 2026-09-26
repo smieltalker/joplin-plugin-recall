@@ -14,6 +14,11 @@ Rediscover your own notes, and see how much you've actually written.
 
 ## Writing statistics
 
+![The writing statistics dialog](docs/writing-stats.png)
+
+<sub>Screenshot generated from a synthetic library (`node tools/demoData.js`), not
+from anyone's real notes.</sub>
+
 Every other Joplin word-count plugin counts the *current* note, and all of them
 tokenise with `/\b\w+\b/`, where `\w` is ASCII-only. A 500-character Chinese
 note reports **0 words**. Recall counts the whole library, and counts CJK
@@ -91,14 +96,26 @@ npm run harness
 # numbers: totals, per-year and per-notebook breakdowns, cache behaviour
 <dump> | node .harness-build/tools/statsHarness.js
 
-# layout: renders the panel to a standalone HTML file, light and dark side by side
+# layout: renders the dialog to a standalone HTML file
+# (a 5th argument of "light" or "dark" picks one theme; omit it for both)
 <dump> | node .harness-build/tools/previewHarness.js out.html \
           src/webview/stats.css src/webview/stats.js
 ```
 
-`<dump>` is NDJSON on stdin — one `{"t":"n","v":{...note fields...}}` per note and
-`{"t":"f","v":{...folder fields...}}` per notebook. Piping it straight out of a
-read-only SQLite query keeps your notes off disk.
+`<dump>` can be `node tools/demoData.js`, which emits a deterministic synthetic
+library — that is how the screenshot above is produced, so no real notes are
+involved:
+
+```bash
+node tools/demoData.js | node .harness-build/tools/previewHarness.js \
+  docs/preview.html src/webview/stats.css src/webview/stats.js dark
+```
+
+To check it against your own library instead, pipe NDJSON on stdin out of a
+read-only query against `database.sqlite` — one
+`{"t":"n","v":{...note fields...}}` line per note and one
+`{"t":"f","v":{...folder fields...}}` per notebook. Piping rather than dumping
+to a file keeps your notes off disk.
 
 ## License
 
