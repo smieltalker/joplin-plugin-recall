@@ -27,7 +27,7 @@ correctly:
 | Text | `/\b\w+\b/` | Recall |
 | --- | ---: | ---: |
 | `今天下午去看了房子，中介说学区还不错。` | 0 | 17 |
-| `读完了《随机漫步的傻瓜》，Taleb 讲得很好。` | 1 | 15 |
+| `读完这本书花了三天，里面讲的 survivorship bias 很有意思。` | 2 | 19 |
 | `これはテストです` | 0 | 8 |
 | `Today I went to see the apartment.` | 7 | 7 |
 

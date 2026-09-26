@@ -24,10 +24,10 @@ eq('Chinese: words == Han count', countBody(zh).words, 25);
 eq('Chinese: full-width punctuation counted apart', countBody(zh).cjkPunct, 3);
 eq('  (the /\\b\\w+\\b/ tokeniser would report)', asciiWordCount(zh), 0);
 
-const mixed = '读完了《随机漫步的傻瓜》，Taleb 讲的 survivorship bias 很警醒。';
-eq('Mixed: Han characters', countBody(mixed).cjk, 15);
-eq('Mixed: Latin words', countBody(mixed).latin, 3);
-eq('Mixed: total', countBody(mixed).words, 18);
+const mixed = '读完这本书花了三天，里面讲的 survivorship bias 很有意思。';
+eq('Mixed: Han characters', countBody(mixed).cjk, 17);
+eq('Mixed: Latin words', countBody(mixed).latin, 2);
+eq('Mixed: total', countBody(mixed).words, 19);
 
 eq('Japanese kana counted per character', countBody('これはテストです').cjk, 8);
 eq('Korean tokenises as words, not characters', countBody('오늘은 좋은 날이다').latin, 3);
