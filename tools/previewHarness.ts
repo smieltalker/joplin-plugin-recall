@@ -41,9 +41,18 @@ const THEMES: Record<string, string> = {
 	const themes = only ? { [only]: THEMES[only] } : THEMES;
 	const out = `<!doctype html><meta charset="utf-8"><title>Recall panel preview</title>
 <style>
-/* Stacked full-width, because the real thing is a 90vw x 80vh dialog. */
-body{margin:0;font-family:sans-serif}
-.pane{padding:20px 24px;box-sizing:border-box}
+/* Each pane is a FIXED-SIZE box that does not scroll, mirroring Joplin's own
+   dialog: its stylesheet sets overflow:unset and leaves scrolling to the
+   plugin's webview. An earlier version of this harness let the whole page
+   scroll, which hid the fact that overflowing content was being clipped in the
+   real dialog — so the box below is deliberately unforgiving. */
+body{margin:0;font-family:sans-serif;background:#555;padding:16px}
+.pane{
+  width: 1300px; height: 620px;   /* a modest Joplin window's 90vw x 90vh */
+  overflow: unset;                 /* exactly what Joplin does */
+  padding:20px 24px; box-sizing:border-box; margin-bottom:16px;
+  border-radius:4px;
+}
 .pane.light{background:#fff}
 .pane.dark{background:#1d2024}
 ${css}

@@ -1,7 +1,18 @@
 /* Styling leans on Joplin's own theme variables so the dialog follows whatever
    light/dark theme the user has picked, rather than hard-coding colours. */
 
+/* Joplin sets `overflow: unset` on the dialog on purpose — its own stylesheet
+   says overflow "should be handled within WebView dialogs (rather than
+   externally)". Nothing outside this file will ever scroll, so the content has
+   to bring its own scroll container or it is simply clipped. With
+   fitToContent(false) the iframe is width/height 100% of the dialog body, so
+   100% here is exactly the visible area. */
+html, body { height: 100%; margin: 0; }
+
 .wrap {
+	height: 100%;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	font-family: var(--joplin-font-family, sans-serif);
 	font-size: var(--joplin-font-size, 13px);
 	color: var(--joplin-color, #222);
