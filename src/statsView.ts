@@ -20,6 +20,10 @@ const esc = (s: string): string =>
 
 const n = (x: number): string => x.toLocaleString();
 
+// A notebook or note title containing "|" would otherwise split the cell and
+// break every row below it.
+const cell = (s: string): string => String(s).replace(/\|/g, '\\|');
+
 // --- fragments -----------------------------------------------------------
 
 function tile(label: string, value: number, sub = ''): string {
@@ -53,7 +57,9 @@ function heatmap(byDay: Record<string, number>): string {
 	const values: number[] = [];
 	for (const k of Object.keys(byDay)) values.push(byDay[k]);
 	values.sort((a, b) => a - b);
-	// Percentile thresholds, so one 10k-word day doesn't flatten the rest.
+	// Percentile thresholds, so one 10k-word day doesn't flatten the rest. They
+	// are taken over every day the user ever wrote, not just the visible year, so
+	// the shading means the same thing each time the dialog is opened.
 	const at = (p: number) => values.length ? values[Math.min(values.length - 1, Math.floor(values.length * p))] : 0;
 	const t = [at(0.25), at(0.5), at(0.75), at(0.92)];
 	const level = (v: number) => (v <= 0 ? 0 : v <= t[0] ? 1 : v <= t[1] ? 2 : v <= t[2] ? 3 : v <= t[3] ? 4 : 5);
@@ -78,8 +84,15 @@ function heatmap(byDay: Record<string, number>): string {
 		col++;
 	}
 
+	// Drop labels that would collide. Compare against the last label we KEPT,
+	// not the previous element, or a run of near-columns all survives.
+	let lastKept = -99;
 	const labels = months
-		.filter((m, i) => i === 0 || m.col - months[i - 1].col >= 3)
+		.filter((m) => {
+			if (m.col - lastKept < 3) return false;
+			lastKept = m.col;
+			return true;
+		})
 		.map((m) => `<span style="left:${m.col * CELL_PITCH}px">${esc(m.label)}</span>`)
 		.join('');
 
@@ -139,6 +152,9 @@ export function render(s: Stats): string {
 			<li>Markdown syntax, URLs, attachment links, HTML tags and inline code are removed first.</li>
 			<li>Fenced code blocks are excluded${s.total.code ? ` (${n(s.total.code)} characters skipped)` : ''}.</li>
 			${punct}
+			<li>Every date breakdown — the heatmap, the years, "today" — buckets a note
+				by when it was <em>created</em>, so editing an old note adds to the year it
+				was written, not to today.</li>
 			<li>Recall's own generated notes are not counted.</li>
 		</ul>
 	</details>
@@ -161,13 +177,13 @@ export function toMarkdown(s: Stats): string {
 		``,
 		`| Year | Words | Notes |`,
 		`| --- | ---: | ---: |`,
-		...s.byYear.map((y) => `| ${y.key} | ${n(y.words)} | ${n(y.notes)} |`),
+		...s.byYear.map((y) => `| ${cell(y.key)} | ${n(y.words)} | ${n(y.notes)} |`),
 		``,
 		`## By notebook`,
 		``,
 		`| Notebook | Words | Notes |`,
 		`| --- | ---: | ---: |`,
-		...s.byNotebook.filter((b) => b.words > 0).map((b) => `| ${b.key} | ${n(b.words)} | ${n(b.notes)} |`),
+		...s.byNotebook.filter((b) => b.words > 0).map((b) => `| ${cell(b.key)} | ${n(b.words)} | ${n(b.notes)} |`),
 	];
 	return lines.join('\n');
 }

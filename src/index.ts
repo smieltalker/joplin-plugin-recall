@@ -1,9 +1,9 @@
 import joplin from 'api';
-import { MenuItemLocation, ToolbarButtonLocation, SettingItemType } from 'api/types';
+import { MenuItemLocation, ToolbarButtonLocation, SettingItemType, ToastType } from 'api/types';
 import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX } from './constants';
 import { registerDialog, showStats, toMarkdown } from './statsView';
 import { computeStats, CACHE_SETTING } from './stats';
-import { upsertStatsNote } from './statsNote';
+import { upsertStatsNote, STATS_NOTE_SETTING } from './statsNote';
 
 interface NoteMeta {
 	id: string;
@@ -174,6 +174,9 @@ async function cmdDailyDigest() {
 // Write the statistics into a real note, for people who want them synced,
 // searchable, or pasted somewhere else.
 async function cmdStatsNote() {
+	// Counting can take a few seconds on a cold cache and this path has no
+	// dialog to show progress in, so say something first.
+	await joplin.views.dialogs.showToast({ message: 'Recall: counting…', type: ToastType.Info });
 	const stats = await computeStats();
 	const id = await upsertStatsNote(toMarkdown(stats));
 	await joplin.commands.execute('openNote', id);
@@ -213,6 +216,13 @@ joplin.plugins.register({
 				public: true,
 				label: 'Target notebook ID (optional)',
 				description: 'Notebook ID where "On This Day" and "Daily Recall" notes are stored. Leave empty for the default location. (Right-click a notebook → Copy notebook ID.)',
+			},
+			[STATS_NOTE_SETTING]: {
+				value: '',
+				type: SettingItemType.String,
+				section: 'recall',
+				public: false,
+				label: 'Writing statistics note id',
 			},
 			[CACHE_SETTING]: {
 				value: '',

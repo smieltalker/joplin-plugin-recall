@@ -83,11 +83,14 @@ const toCounts = (e: Entry): Counts =>
 
 // --- fetching ------------------------------------------------------------
 
+// Paging needs a stable sort or rows shift between pages and get skipped or
+// counted twice. `id` never changes; `updated_time` does, mid-scan, every time
+// the user saves a note.
 async function fetchPaged<T>(path: string[], fields: string[]): Promise<T[]> {
 	const out: T[] = [];
 	let page = 1;
 	for (;;) {
-		const res = await joplin.data.get(path, { fields, limit: PAGE_SIZE, page });
+		const res = await joplin.data.get(path, { fields, limit: PAGE_SIZE, page, order_by: 'id', order_dir: 'ASC' });
 		out.push(...res.items);
 		if (!res.has_more) break;
 		page++;
@@ -153,6 +156,8 @@ export async function computeStats(onProgress: Progress = () => {}): Promise<Sta
 					fields: ['id', 'body', 'updated_time'],
 					limit: PAGE_SIZE,
 					page,
+					order_by: 'id',
+					order_dir: 'ASC',
 				});
 				for (const row of res.items as { id: string; body: string; updated_time: number }[]) {
 					if (!staleIds.has(row.id)) continue;
@@ -188,7 +193,11 @@ export async function computeStats(onProgress: Progress = () => {}): Promise<Sta
 
 	const now = new Date();
 	const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-	const startOfWeek = startOfDay - ((now.getDay() + 6) % 7) * 86400000; // weeks start Monday
+	// Calendar arithmetic, not startOfDay - n*86400000: a fixed 24h step lands on
+	// the wrong day across a daylight-saving boundary.
+	const startOfWeek = new Date(
+		now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7),
+	).getTime(); // weeks start Monday
 	const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 	const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
 
