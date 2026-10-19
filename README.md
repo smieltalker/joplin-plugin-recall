@@ -8,7 +8,7 @@ Rediscover your own notes, and see how much you've actually written.
   years*, the way photo apps show "memories". Joplin has no built-in equivalent.
 - **Daily Recall digest** — generates a single note combining *On This Day* plus
   a handful of random notes, with clickable links. Optionally built automatically
-  on startup.
+  on startup on desktop.
 - **Writing statistics** — the word count of your whole library: totals, a
   12-month heatmap, and breakdowns by year and by notebook.
 
@@ -45,17 +45,27 @@ in ~70 paged API calls; later runs re-read nothing and only refresh the
 metadata. The cache lives in a plugin setting (~220 KB at that size) and can be
 rebuilt from the panel.
 
-**Where it lives.** Open it from **Tools → Recall → Writing statistics**. It is
-a dialog, not a panel, because this is a look-at-it-occasionally feature and a
-panel would hold a column of the layout open for it permanently. From the
-dialog you can copy the figures as Markdown or rebuild the cache.
+**Where it lives.** On desktop, open **Tools → Recall → Writing statistics**
+for an occasional-use dialog. On Android, open **plugin panels → Recall** and
+choose **Writing statistics**. Both let you copy the figures as Markdown or
+rebuild the cache.
 
 ## Usage
 
-After installing, you get:
+Install Recall from Joplin’s plugin directory, or download the `.jpl` from
+[GitHub Releases](https://github.com/smieltalker/joplin-plugin-recall/releases/latest)
+and use **Settings → Plugins → Advanced → Install from file**. Fully restart
+Joplin after installing or upgrading so all settings appear.
 
-- A **die icon** in the note toolbar → open a random note.
-- A **Tools → Recall** menu with every action.
+**Desktop (Joplin 3.0+):** a **die icon** in the note toolbar opens a random
+note; **Tools → Recall** contains every action.
+
+**Android (Joplin 3.4+):** finish syncing, then open **plugin panels → Recall**.
+The panel provides Random note, On This Day, Daily Recall and Writing statistics.
+Automatic startup generation is disabled on mobile; generate reviews manually
+after syncing. Physical-device feedback covers Joplin 3.7.8 on Android 16 and 17;
+the declared minimum version has not been tested on a device. iOS has not been
+validated, and Joplin restricts iOS installation to recommended plugins.
 
 ## Settings
 
@@ -68,7 +78,7 @@ Settings → Recall:
 | Source notebook IDs | _(empty)_ | Comma-separated notebook IDs to review; empty = all notebooks |
 | Include sub-notebooks | off | Include all descendants of the selected source notebooks |
 | Target notebook ID | _(empty)_ | Where generated notes are stored; empty = default |
-| Generate Daily Recall on startup | off | Auto-build the digest when Joplin starts |
+| Generate Daily Recall on startup | off | Auto-build the digest when Joplin starts (desktop only) |
 
 The "On This Day" and "Daily Recall" notes are **upserted per day** —
 re-running updates the same note instead of creating duplicates.
@@ -121,18 +131,7 @@ to a file keeps your notes off disk.
 
 MIT
 
-## Android test build (1.1.0)
-
-This branch adds experimental Android support for Joplin 3.4 or newer. It has not
-been released to npm or the official plugin directory. Physical-device testing
-is still required before calling this stable. Desktop keeps its toolbar button,
-Tools menu and statistics dialog.
-
-1. Build with `npm run dist`, or use the supplied test `.jpl`.
-2. On Android, open Configuration → Plugins → Advanced → Install from file and
-   select `com.github.smieltalker.recall.jpl`. Restart Joplin if requested.
-3. Sync your notes, then open Joplin's **plugin panels** button and select Recall.
-4. Use Random note, On this day, Daily Recall, or Writing statistics.
+## Mobile behaviour
 
 The mobile statistics page reports scan progress. **Copy Markdown** copies the
 figures; **Recount** clears the count cache and scans again. The first scan reads
@@ -161,7 +160,7 @@ This can change historical year/month/day breakdowns from version 1.0.1, without
 changing the whole-library word total or modifying the source notes.
 
 
-## Notebook sources (second Android test build, 1.1.1)
+## Notebook sources
 
 In **Settings → Recall**, set **Source notebook IDs (optional)** to one or more
 notebook IDs separated by commas. On desktop, right-click a notebook and choose
@@ -180,7 +179,12 @@ configure Recall's source settings on each device where you use it.
   with an empty-scope result. Sync first if a selected notebook is not yet available.
 - Whitespace, duplicate IDs, uppercase hex IDs, and a trailing comma are accepted.
 
-This second test build keeps all Android changes from 1.1.0. Upgrade by installing
-its `.jpl` from file, then fully restart Joplin so the new settings appear. The first Android test build received positive feedback in
-issue #1 from one tester using two devices (Joplin 3.7.8 on Android 16 and 17);
-that report does not yet validate the new source filtering in 1.1.1.
+## Validation
+
+Version 1.1.1 passes 30 counting assertions and 57 plugin integration scenarios.
+The final beta was installed and exercised in Joplin’s mobile web app, including
+an upgrade from 1.1.0, notebook scopes and whole-library statistics. A community
+tester [reported success](https://github.com/smieltalker/joplin-plugin-recall/issues/2#issuecomment-6269921708)
+on Android 16 and 17 with Joplin 3.7.8, and on Ubuntu 26.04 with Joplin 3.7.21.
+That report does not enumerate every native interaction or filter edge case.
+Real multi-device sync and iOS behaviour have not been verified.
