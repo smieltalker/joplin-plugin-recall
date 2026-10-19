@@ -38,7 +38,7 @@ html, body { height: 100%; margin: 0; }
 .tile-l { font-size: .82em; opacity: .62; margin-top: 2px; }
 
 /* --- the three breakdowns sit side by side when the dialog is wide --- */
-.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 0 32px; }
 .cols section { min-width: 0; }
 
 /* --- bar rows --- */
@@ -92,3 +92,25 @@ i.c.l5 { background: #2f9e62; opacity: 1; }
 	font-size: .82em;
 }
 .foot span { opacity: .45; }
+
+/* Mobile panels own their page scroll; desktop dialogs retain .wrap scrolling. */
+body.recall-mobile { height: auto; }
+.recall-mobile main { padding: 12px; }
+.recall-mobile .wrap { height: auto; overflow: visible; }
+.recall-mobile .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.recall-mobile button {
+	min-height: 48px; padding: 10px; border-radius: 6px;
+	font: inherit; color: inherit; background: transparent;
+	border: 1px solid var(--joplin-divider-color, #888); cursor: pointer;
+}
+.recall-mobile button:focus-visible { outline: 2px solid var(--joplin-url-color, #2e7fd4); }
+.recall-mobile button:disabled { opacity: .5; cursor: wait; }
+.recall-mobile .stats-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.recall-mobile .status { min-height: 1.5em; overflow-wrap: anywhere; }
+.recall-mobile .intro { line-height: 1.5; opacity: .75; }
+.recall-mobile .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.recall-mobile .tile { min-width: 0; padding: 8px; overflow-wrap: anywhere; }
+.recall-mobile .tile-v { font-size: 1.25em; }
+.recall-mobile .heatwrap { min-width: 0; }
+
+.recall-mobile [hidden] { display: none !important; }

@@ -1,0 +1,145 @@
+import * as assert from 'assert';
+import { lifecycle, store, reset } from './pluginStub';
+import '../src/index';
+import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX } from '../src/constants';
+import { computeStats } from '../src/stats';
+
+let passed = 0;
+const check = (name: string, fn: () => void) => { fn(); passed++; console.log(`  ok  ${name}`); };
+const run = (action: string) => store.commands[`recall.${action}`]();
+const panel = (action: string) => store.panels['recall.mobile'].handler!({ action });
+const lastState = () => store.states[store.states.length - 1];
+function note(id: string, title: string, body = 'hello 世界', time = Date.now()) {
+	return { id, title, body, parent_id: 'book', created_time: time, updated_time: time, is_todo: 0, todo_completed: 0 };
+}
+
+(async () => {
+	reset('mobile');
+	let timers = 0;
+	const originalTimer = global.setTimeout;
+	global.setTimeout = (() => { timers++; return 0; }) as any;
+	await lifecycle.onStart();
+	global.setTimeout = originalTimer;
+	check('mobile registers all four commands and a launcher; no desktop APIs or automatic writes', () => {
+		assert.equal(Object.keys(store.commands).length, 4);
+		assert.equal(Object.keys(store.panels).length, 1);
+		assert.equal(store.menus + store.toolbars + store.dialogs + store.posts + timers, 0);
+	});
+	await panel('ready');
+	check('reopened panel restores current state', () => assert.match(lastState().status, /startup generation is off/));
+	await run('randomNote');
+	check('empty library reports no notes', () => assert.match(store.messages.pop()!, /no notes/));
+	store.notes = [note('ordinary', 'A [bracket] and \\slash'), note('todo', 'Done'), note('generated', DIGEST_PREFIX + ' · yesterday')];
+	store.notes[1].is_todo = 1; store.notes[1].todo_completed = 123;
+	store.noteChange();
+	await panel('randomNote');
+	check('random review excludes generated notes and completed to-dos', () => assert.equal(store.opened.pop(), 'ordinary'));
+	store.syncStart();
+	await run('dailyDigest');
+	check('active sync prevents summary writes', () => { assert.equal(store.posts, 0); assert.match(store.messages.pop()!, /synchronisation/); });
+	store.syncComplete({ withErrors: false });
+
+	// Force two requests to overlap at the write, then release the first.
+	let release!: () => void;
+	const blocked = new Promise<void>((resolve) => { release = resolve; });
+	let reached!: () => void;
+	const writing = new Promise<void>((resolve) => { reached = resolve; });
+	store.beforePost = async () => { reached(); await blocked; };
+	const first = run('dailyDigest');
+	await writing;
+	await run('dailyDigest');
+	release(); await first; store.beforePost = null;
+	check('double taps create only one daily summary in a notebook', () => {
+		assert.equal(store.posts, 1);
+		assert.equal(store.notes.find((n) => n.id === 'generated-1')!.parent_id, 'book');
+	});
+	check('generated note links escape brackets and backslashes', () => {
+		assert.ok(store.notes.find((n) => n.id === 'generated-1')!.body.includes('[A \\[bracket\\] and \\\\slash](:/ordinary)'));
+	});
+	await run('dailyDigest');
+	check('rerunning updates the same daily note', () => { assert.equal(store.posts, 1); assert.equal(store.puts, 1); });
+
+	store.beforeGet = async (path) => { if (path[0] === 'notes' && path.length === 1) store.syncStart(); };
+	await run('dailyDigest'); store.beforeGet = null;
+	check('sync beginning during generation aborts before updating a note', () => {
+		assert.equal(store.puts, 1); assert.match(store.messages.pop()!, /synchronisation/);
+	});
+	store.syncComplete({ withErrors: false });
+	store.beforeGet = async (path) => {
+		if (path[0] === 'notes' && path.length === 1) {
+			store.syncStart(); store.syncComplete({ withErrors: false });
+		}
+	};
+	await run('dailyDigest'); store.beforeGet = null;
+	check('even a sync that finishes mid-generation invalidates that snapshot', () => {
+		assert.equal(store.puts, 1); assert.match(store.messages.pop()!, /synchronisation/);
+	});
+
+	const today = new Date();
+	const old = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()).getTime();
+	store.notes.push(note('anniversary', 'An anniversary', '去年今天', old)); store.noteChange();
+	await run('onThisDay');
+	check('on-this-day includes previous years and opens the result', () => {
+		const output = store.notes.find((n) => n.title.startsWith(ON_THIS_DAY_PREFIX))!;
+		assert.ok(output.body.includes('(:/anniversary)'));
+		assert.ok(!output.body.includes('(:/ordinary)'));
+		assert.equal(store.opened.pop(), output.id);
+	});
+
+
+	store.notes.push({ ...note('imported', 'Imported date', '旧日记'), user_created_time: old });
+	store.noteChange(); await run('onThisDay');
+	check('on-this-day honours imported/user-edited creation dates', () => {
+		assert.ok(store.notes.find((n) => n.title.startsWith(ON_THIS_DAY_PREFIX))!.body.includes('(:/imported)'));
+	});
+	const datedStats = await computeStats();
+	check('statistics use the same visible creation date', () => {
+		assert.equal(datedStats.byYear.find((row) => row.key === String(today.getFullYear() - 1))!.words, 7);
+	});
+
+	store.notes = Array.from({ length: 205 }, (_, i) => note(`n${String(i).padStart(3, '0')}`, i === 0 ? '<img src=x onerror=alert(1)>' : `Note ${i}`));
+	store.noteChange(); store.settings['recall.statsCache'] = ''; store.calls = [];
+	await panel('writingStats');
+	check('mobile counts a multi-page library and escapes note titles', () => {
+		assert.ok(lastState().html.includes('615'));
+		assert.ok(lastState().html.includes('&lt;img'));
+		assert.ok(!lastState().html.includes('<img'));
+		assert.equal(lastState().busy, false);
+	});
+	check('first scan reports progress before completion', () => assert.ok(store.states.some((s) => /Counting…/.test(s.status))));
+	store.calls = []; await panel('writingStats');
+	check('warm cache does not refetch note bodies', () => assert.ok(!store.calls.some((c) => c.query.fields?.includes('body'))));
+	await panel('copy');
+	check('Android copy returns Markdown statistics', () => assert.match(store.clipboard, /Total words:\*\* 615/));
+	store.calls = []; await panel('rebuild');
+	check('recount discards the cache and reads bodies again', () => assert.ok(store.calls.some((c) => c.query.fields?.includes('body'))));
+	const priorPosts = store.posts;
+	await panel('deleteEverything');
+	check('panel rejects actions outside its allowlist', () => assert.equal(store.posts, priorPosts));
+	store.beforeGet = async () => { throw new Error('Simulated API failure'); };
+	await panel('rebuild'); store.beforeGet = null;
+	check('statistics error releases the busy state', () => { assert.equal(lastState().busy, false); assert.match(lastState().status, /Simulated API failure/); });
+	await panel('rebuild');
+	check('statistics can be retried after an error', () => assert.match(lastState().status, /Statistics ready/));
+
+	store.notes = []; store.folders = []; store.noteChange();
+	await run('dailyDigest');
+	check('missing notebook gives a useful error and creates nothing', () => {
+		assert.equal(store.posts, priorPosts); assert.match(store.messages.pop()!, /Create a notebook/);
+	});
+
+	reset('desktop'); store.settings['recall.runOnStartup'] = false;
+	await lifecycle.onStart();
+	check('desktop retains toolbar, menu and dialog, without a mobile panel', () => {
+		assert.equal(store.menus, 1); assert.equal(store.toolbars, 1); assert.equal(store.dialogs, 1);
+		assert.equal(Object.keys(store.panels).length, 0);
+	});
+	await run('writingStats');
+	check('dismissing desktop statistics without a button result is safe', () => assert.equal(store.messages.length, 0));
+	store.settings['recall.runOnStartup'] = true;
+	timers = 0;
+	global.setTimeout = (() => { timers++; return 0; }) as any;
+	await lifecycle.onStart(); global.setTimeout = originalTimer;
+	check('desktop startup option still schedules a digest', () => assert.equal(timers, 1));
+	console.log(`\n${passed} integration scenarios passed.\n`);
+})().catch((err) => { console.error(err); process.exitCode = 1; });

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.harness.json",
+  "compilerOptions": {
+    "outDir": "../.plugin-test-build",
+    "target": "es2019",
+    "paths": { "api": ["tools/pluginStub.ts"], "api/types": ["api/types.ts"] },
+    "noEmitOnError": true
+  },
+  "files": ["plugin.test.ts"]
+}

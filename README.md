@@ -118,3 +118,42 @@ to a file keeps your notes off disk.
 ## License
 
 MIT
+
+## Android test build (1.1.0)
+
+This branch adds experimental Android support for Joplin 3.4 or newer. It has not
+been released to npm or the official plugin directory. Physical-device testing
+is still required before calling this stable. Desktop keeps its toolbar button,
+Tools menu and statistics dialog.
+
+1. Build with `npm run dist`, or use the supplied test `.jpl`.
+2. On Android, open Configuration → Plugins → Advanced → Install from file and
+   select `com.github.smieltalker.recall.jpl`. Restart Joplin if requested.
+3. Sync your notes, then open Joplin's **plugin panels** button and select Recall.
+4. Use Random note, On this day, Daily Recall, or Writing statistics.
+
+The mobile statistics page reports scan progress. **Copy Markdown** copies the
+figures; **Recount** clears the count cache and scans again. The first scan reads
+all local note bodies, so a large library can take longer on a phone. Counts
+reflect notes currently available on that device, not notes still waiting to sync.
+
+**Generation and sync.** Automatic startup generation is disabled on mobile,
+even if the desktop startup setting is on. Generate manually after syncing.
+A sync that starts while Recall is running prevents a subsequent mobile summary
+write, and repeated taps on one device cannot create overlapping summaries.
+This is not a cross-device lock: independently generating on two offline devices
+can still produce duplicate daily summaries after sync. Recall updates existing
+daily summaries by exact title. With no target notebook ID, a new mobile summary
+uses the current notebook, or the first available notebook if none is selected.
+
+**Testing:** `npm test` checks counting rules; `npm run test:plugin` checks mobile
+and desktop registration, generation, sync races, repeated taps, statistics,
+cache reuse, errors, and retry behaviour using an in-memory API double.
+These tests do not simulate Android's native WebView or prove device performance.
+The offline preview and statistics harnesses remain available with `npm run harness`.
+
+Date-based features now use Joplin's visible Created date (`user_created_time`),
+falling back to internal `created_time` when unavailable. Imported or manually
+backdated notes are therefore reviewed and grouped under their original dates.
+This can change historical year/month/day breakdowns from version 1.0.1, without
+changing the whole-library word total or modifying the source notes.

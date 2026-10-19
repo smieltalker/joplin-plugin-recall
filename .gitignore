@@ -1,6 +1,7 @@
 dist/
-node_modules/
+node_modules
 publish/
 .test-build/
 .harness-build/
 docs/preview.html
+.plugin-test-build/

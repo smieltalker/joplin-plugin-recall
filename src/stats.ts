@@ -1,6 +1,6 @@
 import joplin from 'api';
 import { Counts, countBody, emptyCounts, addCounts } from './wordcount';
-import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX } from './constants';
+import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX, createdAt } from './constants';
 
 // -------------------------------------------------------------------------
 // Whole-library statistics.
@@ -29,6 +29,7 @@ interface NoteRow {
 	parent_id: string;
 	title: string;
 	created_time: number;
+	user_created_time?: number;
 	updated_time: number;
 }
 
@@ -123,7 +124,7 @@ export async function computeStats(onProgress: Progress = () => {}): Promise<Sta
 	onProgress('Reading note list…');
 	const notes = await fetchPaged<NoteRow>(
 		['notes'],
-		['id', 'parent_id', 'title', 'created_time', 'updated_time'],
+		['id', 'parent_id', 'title', 'created_time', 'user_created_time', 'updated_time'],
 	);
 	const folders = await fetchPaged<{ id: string; title: string; parent_id: string }>(
 		['folders'],
@@ -216,7 +217,7 @@ export async function computeStats(onProgress: Progress = () => {}): Promise<Sta
 		total = addCounts(total, c);
 		if (c.words > 0) withBody++;
 
-		const created = n.created_time || 0;
+		const created = createdAt(n);
 		const y = String(new Date(created).getFullYear());
 		(years[y] ||= { key: y, words: 0, notes: 0 });
 		years[y].words += c.words;

@@ -1,0 +1,10 @@
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+const root = path.resolve(__dirname, '..');
+execFileSync(path.join(root, 'node_modules/.bin/tsc'), ['-p', path.join(root, 'tools/tsconfig.plugin-test.json')], { stdio: 'inherit' });
+const shim = path.join(root, '.plugin-test-build/node_modules/api');
+fs.mkdirSync(shim, { recursive: true });
+fs.writeFileSync(path.join(shim, 'index.js'), "module.exports = require('../../tools/pluginStub.js');\n");
+fs.writeFileSync(path.join(shim, 'types.js'), "module.exports = require('../../api/types.js');\n");
+execFileSync(process.execPath, [path.join(root, '.plugin-test-build/tools/plugin.test.js')], { stdio: 'inherit' });

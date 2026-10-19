@@ -152,7 +152,7 @@ export function render(s: Stats): string {
 			<li>Fenced code blocks are excluded${s.total.code ? ` (${n(s.total.code)} characters skipped)` : ''}.</li>
 			${punct}
 			<li>Every date breakdown — the heatmap, the years, "today" — buckets a note
-				by when it was <em>created</em>, so editing an old note adds to the year it
+				by its visible <em>Created</em> date in Joplin, so editing an old note adds to the year it
 				was written, not to today.</li>
 			<li>Recall's own generated notes are not counted.</li>
 		</ul>
@@ -222,10 +222,10 @@ export async function showStats(rebuild = false): Promise<void> {
 		await joplin.views.dialogs.setHtml(handle, render(stats));
 		const result = await joplin.views.dialogs.open(handle);
 
-		if (result.id === 'copy') {
+		if (result?.id === 'copy') {
 			await joplin.clipboard.writeText(toMarkdown(stats));
 			await joplin.views.dialogs.showToast({ message: 'Recall: statistics copied.', type: ToastType.Success });
-		} else if (result.id === 'rebuild') {
+		} else if (result?.id === 'rebuild') {
 			busy = false;
 			return showStats(true);
 		}
