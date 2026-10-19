@@ -3,6 +3,7 @@ import { lifecycle, store, reset } from './pluginStub';
 import '../src/index';
 import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX } from '../src/constants';
 import { computeStats } from '../src/stats';
+import { SOURCE_NOTEBOOK_IDS, INCLUDE_SUB_NOTEBOOKS, sourceNotebookIds } from '../src/notebookScope';
 
 let passed = 0;
 const check = (name: string, fn: () => void) => { fn(); passed++; console.log(`  ok  ${name}`); };
@@ -141,5 +142,127 @@ function note(id: string, title: string, body = 'hello 世界', time = Date.now(
 	global.setTimeout = (() => { timers++; return 0; }) as any;
 	await lifecycle.onStart(); global.setTimeout = originalTimer;
 	check('desktop startup option still schedules a digest', () => assert.equal(timers, 1));
+
+	const notebookId = (n: number) => n.toString(16).padStart(32, '0');
+	const A = notebookId(170), C = notebookId(187), G = notebookId(204), B = notebookId(221);
+	const OUT = notebookId(238), EMPTY = notebookId(255);
+	for (const platform of ['mobile', 'desktop']) {
+		reset(platform); store.settings['recall.runOnStartup'] = false;
+		await lifecycle.onStart(); store.noteChange();
+		store.folders = [
+			{ id: A, title: 'Journal', parent_id: '' },
+			{ id: C, title: 'Child', parent_id: A },
+			{ id: G, title: 'Grandchild', parent_id: C },
+			{ id: B, title: 'Journal', parent_id: '' },
+			{ id: OUT, title: 'Recall output', parent_id: '' },
+			{ id: EMPTY, title: 'Empty', parent_id: '' },
+		];
+		store.notes = [
+			{ ...note('root-a', 'Root A', 'hello 世界', old), parent_id: A },
+			{ ...note('child', 'Child note', 'hello 世界', old), parent_id: C },
+			{ ...note('grandchild', 'Grandchild note', 'hello 世界', old), parent_id: G },
+			{ ...note('root-b', 'Root B', 'hello 世界', old), parent_id: B },
+		];
+		store.settings['recall.targetNotebookId'] = OUT;
+		const digest = () => store.notes.find((n) => n.title.startsWith(DIGEST_PREFIX))!;
+		const onDay = () => store.notes.find((n) => n.title.startsWith(ON_THIS_DAY_PREFIX))!;
+		const otdPart = () => digest().body.split('## Random Review')[0];
+		check(`${platform}: source settings default to whole library and no descendants`, () => {
+			assert.equal(store.settings[SOURCE_NOTEBOOK_IDS], '');
+			assert.equal(store.settings[INCLUDE_SUB_NOTEBOOKS], false);
+		});
+		store.calls = []; await run('dailyDigest');
+		check(`${platform}: blank source keeps all notebooks without a folder scan`, () => {
+			for (const id of ['root-a','child','grandchild','root-b']) assert.ok(otdPart().includes(`(:/${id})`));
+			assert.ok(!store.calls.some((call) => call.path[0] === 'folders'));
+		});
+		store.settings[SOURCE_NOTEBOOK_IDS] = ` ${A.toUpperCase()}, ${A}, `;
+		await run('randomNote'); await run('dailyDigest'); await run('onThisDay');
+		check(`${platform}: direct source filters all three actions, tolerating case, spaces and duplicates`, () => {
+			assert.equal(store.opened[store.opened.length - 3], 'root-a');
+			assert.ok(otdPart().includes('(:/root-a)'));
+			for (const id of ['child','grandchild','root-b']) {
+				assert.ok(!digest().body.includes(`(:/${id})`));
+				assert.ok(!onDay().body.includes(`(:/${id})`));
+			}
+			assert.ok(onDay().body.includes('(:/root-a)'));
+		});
+		check(`${platform}: summaries stay in the target notebook outside the source scope`, () => {
+			assert.equal(store.posts, 2); assert.equal(digest().parent_id, OUT); assert.equal(onDay().parent_id, OUT);
+		});
+		store.settings[INCLUDE_SUB_NOTEBOOKS] = true;
+		store.settings[SOURCE_NOTEBOOK_IDS] = `${A},${C}`;
+		await run('dailyDigest');
+		check(`${platform}: descendants include all levels and overlapping selections are deduplicated`, () => {
+			for (const id of ['root-a','child','grandchild']) assert.equal(otdPart().split(`(:/${id})`).length - 1, 1);
+			assert.ok(!digest().body.includes('(:/root-b)'));
+		});
+		store.settings[SOURCE_NOTEBOOK_IDS] = `${A},${B}`;
+		store.settings[INCLUDE_SUB_NOTEBOOKS] = false;
+		await run('dailyDigest');
+		check(`${platform}: multiple source notebooks are matched by ID, not duplicate names`, () => {
+			assert.ok(otdPart().includes('(:/root-a)')); assert.ok(otdPart().includes('(:/root-b)'));
+			assert.ok(!digest().body.includes('(:/child)')); assert.ok(!digest().body.includes('(:/grandchild)'));
+		});
+		store.settings[SOURCE_NOTEBOOK_IDS] = B;
+		await run('randomNote'); await run('dailyDigest'); await run('onThisDay');
+		check(`${platform}: setting changes take effect without restart or cache invalidation`, () => {
+			assert.equal(store.opened[store.opened.length - 3], 'root-b');
+			assert.ok(!digest().body.includes('(:/root-a)')); assert.ok(onDay().body.includes('(:/root-b)'));
+			assert.equal(store.posts, 2);
+		});
+		const writes = store.posts + store.puts, openings = store.opened.length;
+		store.settings[SOURCE_NOTEBOOK_IDS] = `${A},${notebookId(999)}`;
+		await run('dailyDigest'); await run('randomNote');
+		check(`${platform}: one unknown source ID stops generation without falling back to all notes`, () => {
+			assert.equal(store.posts + store.puts, writes); assert.equal(store.opened.length, openings);
+			assert.match(store.messages.pop()!, /Source notebooks not found/);
+		});
+		for (const value of ['not-a-notebook-id', ', ,']) {
+			store.settings[SOURCE_NOTEBOOK_IDS] = value; await run('dailyDigest');
+			check(`${platform}: malformed nonempty source '${value}' does not mean all notebooks`, () => {
+				assert.equal(store.posts + store.puts, writes); assert.match(store.messages.pop()!, /32-character/);
+			});
+		}
+		store.settings[SOURCE_NOTEBOOK_IDS] = EMPTY; await run('dailyDigest');
+		check(`${platform}: an empty source does not overwrite the previous daily summary`, () => {
+			assert.equal(store.posts + store.puts, writes); assert.match(store.messages.pop()!, /No notes in the selected/);
+		});
+		store.settings[SOURCE_NOTEBOOK_IDS] = A; store.settings[INCLUDE_SUB_NOTEBOOKS] = true;
+		store.folders.find((folder) => folder.id === C)!.parent_id = B;
+		await run('dailyDigest');
+		check(`${platform}: moving a sub-notebook removes its entire subtree immediately`, () => {
+			assert.ok(otdPart().includes('(:/root-a)'));
+			assert.ok(!digest().body.includes('(:/child)')); assert.ok(!digest().body.includes('(:/grandchild)'));
+		});
+		store.notes.find((n) => n.id === 'root-a')!.parent_id = B;
+		await run('randomNote');
+		check(`${platform}: moving a note out of scope does not reuse stale cached membership`, () => {
+			assert.match(store.messages.pop()!, /No notes in the selected/);
+		});
+		store.settings[SOURCE_NOTEBOOK_IDS] = 'invalid';
+		const scopedStats = await computeStats();
+		check(`${platform}: source settings, even invalid ones, never restrict whole-library statistics`, () => {
+			assert.equal(scopedStats.noteCount, 4); assert.equal(scopedStats.total.words, 12);
+		});
+		store.settings[SOURCE_NOTEBOOK_IDS] = '   ';
+		await run('dailyDigest');
+		check(`${platform}: clearing source IDs restores the whole library and reuses the existing summary`, () => {
+			for (const id of ['root-a','child','grandchild','root-b']) assert.ok(otdPart().includes(`(:/${id})`));
+			assert.equal(store.posts, 2);
+		});
+	}
+	store.folders = Array.from({ length: 205 }, (_, i) => ({ id: notebookId(i + 1), title: `Book ${i}`, parent_id: i ? notebookId(i) : '' }));
+	store.settings[SOURCE_NOTEBOOK_IDS] = notebookId(1);
+	store.settings[INCLUDE_SUB_NOTEBOOKS] = true; store.calls = [];
+	const deepScope = await sourceNotebookIds();
+	check('notebook scope paginates more than 100 folders and handles arbitrarily deep descendants', () => {
+		assert.equal(deepScope!.size, 205);
+		assert.equal(store.calls.filter((c) => c.path[0] === 'folders').length, 3);
+	});
+	store.folders[0].parent_id = notebookId(205);
+	const cyclicScope = await sourceNotebookIds();
+	check('malformed cyclic notebook trees terminate without duplicating IDs', () => assert.equal(cyclicScope!.size, 205));
+
 	console.log(`\n${passed} integration scenarios passed.\n`);
 })().catch((err) => { console.error(err); process.exitCode = 1; });

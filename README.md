@@ -65,6 +65,8 @@ Settings → Recall:
 | --- | --- | --- |
 | Random notes in Daily Recall | 3 | How many random notes the digest includes |
 | Exclude completed to-dos | on | Skip finished to-dos when picking notes |
+| Source notebook IDs | _(empty)_ | Comma-separated notebook IDs to review; empty = all notebooks |
+| Include sub-notebooks | off | Include all descendants of the selected source notebooks |
 | Target notebook ID | _(empty)_ | Where generated notes are stored; empty = default |
 | Generate Daily Recall on startup | off | Auto-build the digest when Joplin starts |
 
@@ -157,3 +159,28 @@ falling back to internal `created_time` when unavailable. Imported or manually
 backdated notes are therefore reviewed and grouped under their original dates.
 This can change historical year/month/day breakdowns from version 1.0.1, without
 changing the whole-library word total or modifying the source notes.
+
+
+## Notebook sources (second Android test build, 1.1.1)
+
+In **Settings → Recall**, set **Source notebook IDs (optional)** to one or more
+notebook IDs separated by commas. On desktop, right-click a notebook and choose
+**Copy notebook ID**. IDs identify the same synced notebook across devices;
+configure Recall's source settings on each device where you use it.
+
+- Leave source IDs empty to review the whole library (the existing default).
+- Turn on **Include sub-notebooks** to include all descendant levels; default is off.
+- These settings apply to Random note, On This Day, and both sections of Daily Recall.
+- **Writing statistics always cover the whole library.**
+- **Target notebook ID** still controls where newly generated summaries are saved.
+  Existing summaries are updated in place, including when saved outside the source scope.
+- Settings and notebook moves take effect on the next action without restarting.
+- Malformed or unknown source IDs show an error; a source with no eligible notes
+  shows a message. Neither falls back to all notebooks or overwrites a daily note
+  with an empty-scope result. Sync first if a selected notebook is not yet available.
+- Whitespace, duplicate IDs, uppercase hex IDs, and a trailing comma are accepted.
+
+This second test build keeps all Android changes from 1.1.0. Upgrade by installing
+its `.jpl` from file, then fully restart Joplin so the new settings appear. The first Android test build received positive feedback in
+issue #1 from one tester using two devices (Joplin 3.7.8 on Android 16 and 17);
+that report does not yet validate the new source filtering in 1.1.1.

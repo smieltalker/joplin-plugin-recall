@@ -10,7 +10,7 @@ let status = 'Sync your notes before generating a review. Automatic startup gene
 export function mobileHtml(): string {
 	return `<main>
 		<h1>Recall</h1>
-		<p class="intro">Rediscover your notes. Sync first so your review includes your latest notes.</p>
+		<p class="intro">Sync first so your review includes your latest notes. Choose source notebooks in Settings → Recall.</p>
 		<nav class="actions" aria-label="Recall actions">
 			<button data-action="randomNote">Random note</button>
 			<button data-action="onThisDay">On this day</button>

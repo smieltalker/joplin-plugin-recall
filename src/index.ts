@@ -4,9 +4,11 @@ import { ON_THIS_DAY_PREFIX, DIGEST_PREFIX, createdAt } from './constants';
 import { registerDialog, showStats } from './statsView';
 import { CACHE_SETTING } from './stats';
 import { registerMobileView, showMobileStats } from './mobileView';
+import { SOURCE_NOTEBOOK_IDS, INCLUDE_SUB_NOTEBOOKS, sourceNotebookIds } from './notebookScope';
 
 interface NoteMeta {
 	id: string;
+	parent_id: string;
 	title: string;
 	created_time: number; // unix epoch in ms
 	user_created_time?: number;
@@ -52,7 +54,7 @@ async function runAction(action: () => Promise<void>): Promise<void> {
 const CACHE_TTL_MS = 60 * 1000;
 
 async function fetchAllNotes(): Promise<NoteMeta[]> {
-	const fields = ['id', 'title', 'created_time', 'user_created_time', 'is_todo', 'todo_completed'];
+	const fields = ['id', 'parent_id', 'title', 'created_time', 'user_created_time', 'is_todo', 'todo_completed'];
 	const notes: NoteMeta[] = [];
 	let page = 1;
 	for (;;) {
@@ -78,17 +80,27 @@ async function getNotes(forceRefresh = false): Promise<NoteMeta[]> {
 	return notes;
 }
 
-// Notes eligible for random / digest selection: drop this plugin's own
-// generated notes and, optionally, completed to-dos.
-async function selectableNotes(): Promise<NoteMeta[]> {
-	const excludeCompleted = (await joplin.settings.value('recall.excludeCompletedTodos')) as boolean;
-	const all = await getNotes();
-	return all.filter((n) => {
-		const t = n.title || '';
-		if (t.startsWith(ON_THIS_DAY_PREFIX) || t.startsWith(DIGEST_PREFIX)) return false;
-		if (excludeCompleted && n.is_todo === 1 && n.todo_completed) return false;
-		return true;
+// Apply one source scope to all review actions, while retaining the whole
+// library for daily-note lookup (the output notebook may be outside the scope).
+async function reviewNotes(forceRefresh = false): Promise<{ all: NoteMeta[]; source: NoteMeta[] }> {
+	const scope = await sourceNotebookIds();
+	// Scoped reviews refresh metadata so a note moved to another notebook stops
+	// appearing immediately. Folder relationships are also read for each action.
+	const all = await getNotes(forceRefresh || scope !== null);
+	const source = all.filter((note) => {
+		const title = note.title || '';
+		return !title.startsWith(ON_THIS_DAY_PREFIX) && !title.startsWith(DIGEST_PREFIX)
+			&& (scope === null || scope.has(note.parent_id));
 	});
+	if (scope !== null && !source.length) {
+		throw new Error('No notes in the selected source notebooks. Check the source IDs and Include sub-notebooks in Settings → Recall, or finish syncing.');
+	}
+	return { all, source };
+}
+
+async function selectableNotes(source: NoteMeta[]): Promise<NoteMeta[]> {
+	const excludeCompleted = (await joplin.settings.value('recall.excludeCompletedTodos')) as boolean;
+	return source.filter((note) => !(excludeCompleted && note.is_todo === 1 && note.todo_completed));
 }
 
 // -------------------------------------------------------------------------
@@ -163,7 +175,8 @@ async function info(message: string) {
 // Commands
 // -------------------------------------------------------------------------
 async function cmdRandomNote() {
-	const notes = await selectableNotes();
+	const { source } = await reviewNotes();
+	const notes = await selectableNotes(source);
 	if (!notes.length) {
 		await info('Recall: no notes to pick from.');
 		return;
@@ -174,8 +187,8 @@ async function cmdRandomNote() {
 
 async function cmdOnThisDay() {
 	checkSync();
-	const notes = await getNotes(true);
-	const hits = onThisDay(notes);
+	const { all, source } = await reviewNotes(true);
+	const hits = onThisDay(source);
 	const today = fmtDate(Date.now());
 	if (!hits.length) {
 		await info(`Recall — On This Day (${today}):\nNo notes were created on this day in past years.`);
@@ -184,17 +197,17 @@ async function cmdOnThisDay() {
 	const title = `${ON_THIS_DAY_PREFIX} · ${today}`;
 	let body = `# ${title}\n\nNotes you created on this day, in earlier years:\n\n`;
 	for (const h of hits) body += `- ${fmtDate(createdAt(h))} · ${link(h)}\n`;
-	const id = await upsertNote(title, body, notes);
+	const id = await upsertNote(title, body, all);
 	await joplin.commands.execute('openNote', id);
 }
 
 async function cmdDailyDigest() {
 	checkSync();
 	const today = fmtDate(Date.now());
-	const all = await getNotes(true);
-	const otd = onThisDay(all);
+	const { all, source } = await reviewNotes(true);
+	const otd = onThisDay(source);
 	const randomCount = (await joplin.settings.value('recall.randomCount')) as number;
-	const rnd = pickRandom(await selectableNotes(), randomCount);
+	const rnd = pickRandom(await selectableNotes(source), randomCount);
 
 	const title = `${DIGEST_PREFIX} · ${today}`;
 	let body = `# ${title}\n\n## On This Day\n\n`;
@@ -229,6 +242,22 @@ joplin.plugins.register({
 		});
 
 		await joplin.settings.registerSettings({
+			[SOURCE_NOTEBOOK_IDS]: {
+				value: '',
+				type: SettingItemType.String,
+				section: 'recall',
+				public: true,
+				label: 'Source notebook IDs (optional)',
+				description: 'Comma-separated notebook IDs to review. Leave empty for all notebooks. On desktop, right-click a notebook → Copy notebook ID. Applies to Random note, On This Day and Daily Recall; writing statistics still cover the whole library.',
+			},
+			[INCLUDE_SUB_NOTEBOOKS]: {
+				value: false,
+				type: SettingItemType.Bool,
+				section: 'recall',
+				public: true,
+				label: 'Include sub-notebooks',
+				description: 'Include all levels of sub-notebooks inside the selected source notebooks. Applies only when source notebook IDs are set.',
+			},
 			'recall.randomCount': {
 				value: 3,
 				type: SettingItemType.Int,
